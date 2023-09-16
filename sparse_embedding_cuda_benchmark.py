@@ -22,7 +22,8 @@ def get_merged_offsets_from_dense(merged_indices):
     return merged_indices.contiguous().view(-1), merged_offsets
 
 def benchmark_torch_function(iters, f, *args):
-    f(*args)
+    for i in range(10):
+        f(*args)
     torch.cuda.synchronize()
     start_event = torch.cuda.Event(enable_timing=True)
     end_event = torch.cuda.Event(enable_timing=True)
@@ -54,8 +55,15 @@ def benchmark_forward(B, E, T, L, D, iters, fp16):
     assert tuple(x.size()) == (B, T, L)
     assert tuple(cc(x).size()) == (B, T, D)
 
+
     time_per_iter_sequential = benchmark_torch_function(
         iters, lambda: [c(xi[:, i, :]) for i, c in enumerate(ccs)])
+
+    xi_list = [xi[:, i, :] for i, c in enumerate(ccs)]
+    time_per_iter_sequential_correct = benchmark_torch_function(
+        iters, lambda: [c(xi_list[i]) for i, c in enumerate(ccs)])
+
+
     time_per_iter = benchmark_torch_function(iters, cc, x)
     yy = cc(x)
     print(yy.dtype, yy.shape)
@@ -75,6 +83,12 @@ def benchmark_forward(B, E, T, L, D, iters, fp16):
     print(json.dumps(dict(B=B, E=E, T=T, D=D, L=L, time_per_iter=time_per_iter, implementation="Fused-Slow", method="forward")))
     print(json.dumps(dict(B=B, E=E, T=T, D=D, L=L, time_per_iter=time_per_iter_sequential, implementation="Baseline", method="forward")))
 
+
+    print(f'B: {B}, E: {E}, T: {T}, D: {D}, L: {L}, BW: {4 * B * T * L * D / time_per_iter_fast / 1.0e9 :.2f}GB/s, Fused, forward')
+    print(f'B: {B}, E: {E}, T: {T}, D: {D}, L: {L}, BW: {4 * B * T * L * D / time_per_iter_fast_offsets / 1.0e9 :.2f}GB/s, Fused-Offsets, forward')
+    print(f'B: {B}, E: {E}, T: {T}, D: {D}, L: {L}, BW: {4 * B * T * L * D / time_per_iter / 1.0e9 :.2f}GB/s, Fused-Slow, forward')
+    print(f'B: {B}, E: {E}, T: {T}, D: {D}, L: {L}, BW: {4 * B * T * L * D / time_per_iter_sequential / 1.0e9 :.2f}GB/s, Baseline, forward')
+    print(f'B: {B}, E: {E}, T: {T}, D: {D}, L: {L}, BW: {4 * B * T * L * D / time_per_iter_sequential_correct / 1.0e9 :.2f}GB/s, Baseline-Correct, forward')
     logging.info(
         f"Forward, B: {B}, E: {E}, T: {T}, D: {D}, L: {L}, BW: {4 * B * T * L * D / time_per_iter_fast / 1.0e9}GB/s, speedup: {time_per_iter / time_per_iter_fast}, offset-cost: {time_per_iter_fast / time_per_iter_fast_offsets}, speedup-seq: {time_per_iter_sequential / time_per_iter_fast}"
     )

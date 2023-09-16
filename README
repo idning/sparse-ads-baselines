@@ -1,0 +1,47 @@
+
+
+$ python sparse_embedding_cuda_benchmark.py
+INFO:root:Allocating device embedding bag
+torch.float32 torch.Size([128, 64, 32])
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 1.7459839582443238e-05, "implementation": "Fused", "method": "forward"}
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 1.9431999921798706e-05, "implementation": "Fused-Offsets", "method": "forward"}
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 3.442399978637695e-05, "implementation": "Fused-Slow", "method": "forward"}
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 0.004733213806152344, "implementation": "Baseline", "method": "forward"}
+INFO:root:Forward, B: 128, E: 10000, T: 64, D: 32, L: 32, BW: 1921.8064313569466GB/s, speedup: 1.9716103131320888, offset-cost: 0.8985096568911001, speedup-seq: 271.0914830461462
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 5.362175941467286e-05, "implementation": "Fused", "method": "backward"}
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 5.479519844055176e-05, "implementation": "Fused-Offsets", "method": "backward"}
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 7.831999778747559e-05, "implementation": "Fused-Slow", "method": "backward"}
+{"B": 128, "E": 10000, "T": 64, "D": 32, "L": 32, "time_per_iter": 0.01435827880859375, "implementation": "Baseline", "method": "backward"}
+INFO:root:Backward, B: 128, E: 10000, T: 64, D: 32, L: 32, BW: 625.7614887365723GB/s, speedup: 1.460601044098609, offset-cost: 0.9785850027142071, speedup-seq: 267.76963242770444
+
+
+
+$ python table_batched_embeddings_benchmark.py
+INFO:root:Forward, B: 128 (1, True), E: 10000, T: 64, D: 32, L: 32, BW:  669.68GB/s, T: 50us
+INFO:root:Forward, B: 128 (1, False), E: 10000, T: 64, D: 32, L: 32, BW:  673.69GB/s, T: 50us
+INFO:root:Forward, B: 128 (2, True), E: 10000, T: 64, D: 32, L: 32, BW:  919.98GB/s, T: 36us
+INFO:root:Forward, B: 128 (2, False), E: 10000, T: 64, D: 32, L: 32, BW:  925.13GB/s, T: 36us
+INFO:root:Forward, B: 128 (4, True), E: 10000, T: 64, D: 32, L: 32, BW:  1428.83GB/s, T: 23us
+INFO:root:Forward, B: 128 (4, False), E: 10000, T: 64, D: 32, L: 32, BW:  1421.09GB/s, T: 24us
+INFO:root:Forward, B: 128 (8, True), E: 10000, T: 64, D: 32, L: 32, BW:  1512.90GB/s, T: 22us
+INFO:root:Forward, B: 128 (8, False), E: 10000, T: 64, D: 32, L: 32, BW:  1514.52GB/s, T: 22us
+INFO:root:Forward, B: 128 (16, True), E: 10000, T: 64, D: 32, L: 32, BW:  1548.42GB/s, T: 22us
+INFO:root:Forward, B: 128 (16, False), E: 10000, T: 64, D: 32, L: 32, BW:  1561.24GB/s, T: 21us
+INFO:root:Forward, B: 128 (32, True), E: 10000, T: 64, D: 32, L: 32, BW:  1541.25GB/s, T: 22us
+INFO:root:Forward, B: 128 (32, False), E: 10000, T: 64, D: 32, L: 32, BW:  1542.86GB/s, T: 22us
+INFO:root:Forward, B: 128 (64, True), E: 10000, T: 64, D: 32, L: 32, BW:  1550.07GB/s, T: 22us
+INFO:root:Forward, B: 128 (64, False), E: 10000, T: 64, D: 32, L: 32, BW:  1559.64GB/s, T: 22us
+INFO:root:Forward, B: 128 (128, True), E: 10000, T: 64, D: 32, L: 32, BW:  1562.71GB/s, T: 21us
+INFO:root:Forward, B: 128 (128, False), E: 10000, T: 64, D: 32, L: 32, BW:  1585.70GB/s, T: 21us
+INFO:root:Backward-ADAGRAD-nonstochastic-APPROX-NR, B: 128 (1), E: 10000, T: 64, D: 32, L: 32, BW:  667.14GB/s, T: 101us
+INFO:root:Backward-ADAGRAD-nonstochastic-EXACT-NR, B: 128 (1), E: 10000, T: 64, D: 32, L: 32, BW:  181.35GB/s, T: 370us
+INFO:root:Backward-ADAGRAD-nonstochastic-APPROX-NR, B: 128 (2), E: 10000, T: 64, D: 32, L: 32, BW:  822.66GB/s, T: 82us
+INFO:root:Backward-ADAGRAD-nonstochastic-EXACT-NR, B: 128 (2), E: 10000, T: 64, D: 32, L: 32, BW:  201.91GB/s, T: 332us
+INFO:root:Backward-ADAGRAD-nonstochastic-APPROX-NR, B: 128 (4), E: 10000, T: 64, D: 32, L: 32, BW:  842.76GB/s, T: 80us
+INFO:root:Backward-ADAGRAD-nonstochastic-EXACT-NR, B: 128 (4), E: 10000, T: 64, D: 32, L: 32, BW:  200.97GB/s, T: 334us
+INFO:root:Backward-ADAGRAD-nonstochastic-APPROX-NR, B: 128 (8), E: 10000, T: 64, D: 32, L: 32, BW:  878.97GB/s, T: 76us
+INFO:root:Backward-ADAGRAD-nonstochastic-EXACT-NR, B: 128 (8), E: 10000, T: 64, D: 32, L: 32, BW:  194.89GB/s, T: 344us
+INFO:root:Backward-ADAGRAD-nonstochastic-APPROX-NR, B: 128 (16), E: 10000, T: 64, D: 32, L: 32, BW:  888.18GB/s, T: 76us
+INFO:root:Backward-ADAGRAD-nonstochastic-EXACT-NR, B: 128 (16), E: 10000, T: 64, D: 32, L: 32, BW:  171.20GB/s, T: 392us
+INFO:root:Backward-ADAGRAD-nonstochastic-APPROX-NR, B: 128 (32), E: 10000, T: 64, D: 32, L: 32, BW:  887.00GB/s, T: 76us
+INFO:root:Backward-ADAGRAD-nonstochastic-EXACT-NR, B: 128 (32), E: 10000, T: 64, D: 32, L: 32, BW:  161.76GB/s, T: 415us
