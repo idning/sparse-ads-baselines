@@ -3,13 +3,14 @@ import torch
 from torch.nn.parallel.parallel_apply import parallel_apply
 from torch.nn.parallel.replicate import replicate
 from torch.nn.parallel.scatter_gather import gather, scatter
-import horovod.torch as hvd
 import numpy as np
 from sparse_embedding_cuda_ops import sparse_embedding_cuda, UniformShardedEmbeddingBags
 import logging
 logging.basicConfig(level=logging.DEBUG)
 import sys
 
+from json import encoder
+encoder.FLOAT_REPR = lambda o: format(o, '.2f')
 
 def get_offsets_from_dense(indices):
     (B, L) = indices.size()
@@ -19,7 +20,7 @@ def get_merged_offsets_from_dense(merged_indices):
     (B, T, L) = merged_indices.size()
     merged_offsets = torch.tensor(np.fromfunction(lambda b, t: (b*T + t) * L, (B, T + 1), dtype=np.int32)).cuda()
     return merged_indices.contiguous().view(-1), merged_offsets
-    
+
 def benchmark_torch_function(iters, f, *args):
     f(*args)
     torch.cuda.synchronize()

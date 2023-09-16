@@ -5,16 +5,14 @@ from typing import List
 from torch.nn.parallel.parallel_apply import parallel_apply
 from torch.nn.parallel.replicate import replicate
 from torch.nn.parallel.scatter_gather import gather, scatter
-import apex
 from ctypes import cdll
 lib1 = cdll.LoadLibrary('libnccl.so.2')
 
-import sparse_embedding_cuda
+from run_compile import sparse_embedding_cuda
 from torch.nn.parallel import DistributedDataParallel as DDP
 import numpy as np
-import amp_C
-import apex
-import horovod.torch as hvd
+# import apex
+# import horovod.torch as hvd
 
 import sys
 
@@ -59,11 +57,11 @@ class UniformShardedEmbeddingBags(nn.Module):
         # zeros is 2.5x faster than randn for initialization
         if managed == EmbeddingLocation.MANAGED:
             logging.info("Allocating managed embedding bag")
-            embedding_data = torch.randn(size=(num_embeddings, num_tables, embedding_dim), 
+            embedding_data = torch.randn(size=(num_embeddings, num_tables, embedding_dim),
                 out=table_batched_embeddings.new_managed_tensor(torch.randn(1).cuda() if not fp16 else torch.randn(1).cuda().half(), (num_embeddings, num_tables, embedding_dim)))
         elif managed == EmbeddingLocation.HOST_MAPPED:
             logging.info("Allocating host mapped embedding bag")
-            embedding_data = torch.randn(size=(num_embeddings, num_tables, embedding_dim), 
+            embedding_data = torch.randn(size=(num_embeddings, num_tables, embedding_dim),
                 out=table_batched_embeddings.new_managed_tensor(torch.randn(1).cuda() if not fp16 else torch.randn(1).cuda().half(), (num_embeddings, num_tables, embedding_dim)))
         elif managed == EmbeddingLocation.DEVICE:
             logging.info("Allocating device embedding bag")
@@ -85,6 +83,7 @@ class ReduceScatterFunction(torch.autograd.Function):
         return sparse_embedding_cuda.forward_allgather(grad_output)
 
 
+'''
 class All2AllFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, partitioned_embeddings):
@@ -119,13 +118,13 @@ class All2AllFunction(torch.autograd.Function):
         #     grad_output.transpose(1, 0).contiguous(), grad_input)
         # return grad_input.transpose(1, 0)
 
-
 class FastZeroFusedSGD(apex.optimizers.FusedSGD):
     def __init__(self, *args, **kwargs):
         super(FastZeroFusedSGD, self).__init__(*args, **kwargs)
         self._overflow_buf = torch.cuda.IntTensor([0])
 
     def zero_grad(self):
+        import amp_C
         r"""Clears the gradients of all optimized :class:`torch.Tensor` s."""
         grads = [
             p.grad for group in self.param_groups for p in group['params']
@@ -139,6 +138,7 @@ class FastZeroFusedSGD(apex.optimizers.FusedSGD):
                                                      self._overflow_buf,
                                                      [grads, grads], 0.0)
     def amp_zero_grad(self):
+        import amp_C
         stash = self._amp_stash
         self._amp_lazy_init()
         # Zero the model grads.
@@ -153,3 +153,4 @@ class FastZeroFusedSGD(apex.optimizers.FusedSGD):
                                                      [grads, grads], 0.0)
         for param in self._amp_stash.all_fp32_from_fp16_params:
             param.grad = None
+'''

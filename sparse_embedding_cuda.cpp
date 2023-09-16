@@ -5,15 +5,17 @@
 #include <ATen/core/functional.h>
 #include <torch/csrc/cuda/device_set.h>
 #include <torch/csrc/cuda/nccl.h>
-#include <torch/csrc/utils/hash.h>
+#include <c10/util/hash.h>
 
 #include <ATen/ATen.h>
 #include <c10/cuda/CUDAGuard.h>
 #include <c10/util/Exception.h>
 
-#include <THC/THC.h>
+//#include <THC/THC.h>
 
-#include "mpi.h"
+//#include "mpi.h"
+//
+#include <nccl.h>
 
 #include <limits>
 #include <sstream>
@@ -34,59 +36,60 @@ void throw_nccl_error(ncclResult_t status) {
   throw std::runtime_error(err.str());
 }
 
-struct NcclCommList {
-  std::unique_ptr<ncclComm_t[]> comms;
-  int ndevices;
-  NcclCommList(const std::vector<int>& devices)
-      : comms(new ncclComm_t[devices.size()]), ndevices(devices.size()) {
-    NCCL_CHECK(ncclCommInitAll(comms.get(), devices.size(), devices.data()));
-  }
-  NcclCommList(NcclCommList&& foo) = default;
-  ~NcclCommList() {
-    /*
-* TODO(T30279827) Temporarily disable calling ncclCommDestroy
-* Calling ncclCommDestroy while program exiting is undefined
-* according to Nvidia, and lead to segfault in NCCL 2
-* (whether it is called before or after the CUDA runtime destructor).
-* Temporarily disable it in destructor to avoid segfault.
-* Following up with Nvidia for long term solution.
-*/
-    return;
 
-    if (comms) {
-      for (int i = 0; i < ndevices; i++) {
-        int dummy_var;
-        if (cudaGetDevice(&dummy_var) != cudaSuccess) {
-          /* there are cases when this destructor is called after the
-CUDA driver is already unloaded from the process.
-In these cases, skip ncclCommDestroy */
-          return;
-        }
-        ncclCommDestroy(comms[i]);
-      }
-    }
-  }
-  ArrayRef<ncclComm_t> ref() const {
-    return ArrayRef<ncclComm_t>(comms.get(), ndevices);
-  }
-};
-
-using device_list = std::vector<int>;
-// accesses to this object have to be guarded by THC's CudaFreeMutex
-static std::unordered_map<device_list, NcclCommList, torch::hash<device_list> >
-    _communicators;
-
-ArrayRef<ncclComm_t> get_communicators(TensorList inputs) {
-  static auto get_device = [](const at::Tensor& t) -> int {
-    return t.get_device();
-  };
-  device_list devices = fmap(inputs, get_device);
-  auto it = _communicators.find(devices);
-  if (it == _communicators.end())
-    std::tie(it, std::ignore) = _communicators.emplace(devices, devices);
-  return it->second.ref();
-}
-
+//struct NcclCommList {
+//  std::unique_ptr<ncclComm_t[]> comms;
+//  int ndevices;
+//  NcclCommList(const std::vector<int>& devices)
+//      : comms(new ncclComm_t[devices.size()]), ndevices(devices.size()) {
+//    NCCL_CHECK(ncclCommInitAll(comms.get(), devices.size(), devices.data()));
+//  }
+//  NcclCommList(NcclCommList&& foo) = default;
+//  ~NcclCommList() {
+//    /*
+//* TODO(T30279827) Temporarily disable calling ncclCommDestroy
+//* Calling ncclCommDestroy while program exiting is undefined
+//* according to Nvidia, and lead to segfault in NCCL 2
+//* (whether it is called before or after the CUDA runtime destructor).
+//* Temporarily disable it in destructor to avoid segfault.
+//* Following up with Nvidia for long term solution.
+//*/
+//    return;
+//
+//    if (comms) {
+//      for (int i = 0; i < ndevices; i++) {
+//        int dummy_var;
+//        if (cudaGetDevice(&dummy_var) != cudaSuccess) {
+//          /* there are cases when this destructor is called after the
+//CUDA driver is already unloaded from the process.
+//In these cases, skip ncclCommDestroy */
+//          return;
+//        }
+//        ncclCommDestroy(comms[i]);
+//      }
+//    }
+//  }
+//  ArrayRef<ncclComm_t> ref() const {
+//    return ArrayRef<ncclComm_t>(comms.get(), ndevices);
+//  }
+//};
+//
+//using device_list = std::vector<int>;
+//// accesses to this object have to be guarded by THC's CudaFreeMutex
+//static std::unordered_map<device_list, NcclCommList, c10::hash<device_list>>
+//    _communicators;
+//
+//ArrayRef<ncclComm_t> get_communicators(TensorList inputs) {
+//  static auto get_device = [](const at::Tensor& t) -> int {
+//    return t.get_device();
+//  };
+//  device_list devices = fmap(inputs, get_device);
+//  auto it = _communicators.find(devices);
+//  if (it == _communicators.end())
+//    std::tie(it, std::ignore) = _communicators.emplace(devices, devices);
+//  return it->second.ref();
+//}
+//
 ncclDataType_t get_data_type(const Tensor& t) {
   if (t.type().backend() != Backend::CUDA) {
     throw std::runtime_error("Unconvertible NCCL type");
@@ -204,6 +207,7 @@ void sparse_embedding_cuda_backward_update_kernel(torch::Tensor grad_output,
                                                   torch::Tensor indices,
                                                   float lr);
 
+/*
 std::vector<at::Tensor> sparse_embedding_cuda_forward(
     // [device][E // #device][T][D]
     std::vector<at::Tensor> sharded_weights,
@@ -250,6 +254,7 @@ std::vector<at::Tensor> sparse_embedding_cuda_forward(
   }
   return outputs;
 }
+*/
 
 at::Tensor sparse_embedding_cuda_forward_single(
     // [E][T][D]
@@ -321,6 +326,7 @@ void sparse_embedding_cuda_backward_update_offsets(
   sparse_embedding_cuda_backward_update_offsets_kernel(grad_output, weights, indices, offsets, lr);
 }
 
+/*
 
 static std::pair<MPI_Comm*, int> sparse_embedding_comm() {
   static std::once_flag once;
@@ -446,6 +452,7 @@ at::Tensor sparse_embedding_cuda_forward_reduce_scatter(
   }
   return output;
 }
+*/
 
 static __inline__ int ncclTypeSize(ncclDataType_t type) {
   switch (type) {
@@ -468,6 +475,7 @@ static __inline__ int ncclTypeSize(ncclDataType_t type) {
 }
 
 
+/*
 at::Tensor sparse_embedding_cuda_forward_all2all_nccl(
   // [B][T // devices][D])
   at::Tensor embeddings) {
@@ -479,8 +487,8 @@ at::Tensor sparse_embedding_cuda_forward_all2all_nccl(
   // at step w:
   // send input[w][B // devices][T // devices][D] to rank $w$
   // recv input[w][B // devices][T // devices][D] from rank $w$
-  
-  // now, after all-to-all, 
+
+  // now, after all-to-all,
   // output is size [devices][B // devices][T // devices][D]
   // now, transpose to [B // devices][devices][T // devices][D]
   // now, view as [B // devices][devices * T // devices][D]
@@ -564,12 +572,13 @@ at::Tensor sparse_embedding_cuda_forward_all_gather(
   }
   return output;
 }
+*/
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("forward", &sparse_embedding_cuda_forward,
-        "sparse_embedding_cuda_"
-        "forward(sharded_weights, "
-        "scattered_indices) (CUDA)");
+  //m.def("forward", &sparse_embedding_cuda_forward,
+        //"sparse_embedding_cuda_"
+        //"forward(sharded_weights, "
+        //"scattered_indices) (CUDA)");
   m.def("forward_single", &sparse_embedding_cuda_forward_single,
         "sparse_embedding_cuda_forward_single(weights, indices) (CUDA)");
   m.def("forward_fast_single", &sparse_embedding_cuda_forward_fast_single,
@@ -588,14 +597,14 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         "sparse_embedding_cuda_backward_update_fast_single(grad_output, "
         "weights, indices, lr) (CUDA)");
 
-  m.def("forward_all2all", &sparse_embedding_cuda_forward_all2all,
-        "sparse_embedding_cuda_forward_all2all(embeddings, result) (CUDA)");
-  m.def("forward_all2all_nccl", &sparse_embedding_cuda_forward_all2all_nccl,
-        "sparse_embedding_cuda_forward_all2all_nccl(embeddings, result) (CUDA)");
+  //m.def("forward_all2all", &sparse_embedding_cuda_forward_all2all,
+        //"sparse_embedding_cuda_forward_all2all(embeddings, result) (CUDA)");
+  //m.def("forward_all2all_nccl", &sparse_embedding_cuda_forward_all2all_nccl,
+        //"sparse_embedding_cuda_forward_all2all_nccl(embeddings, result) (CUDA)");
 
 
-  m.def("forward_reducescatter", &sparse_embedding_cuda_forward_reduce_scatter,
-        "sparse_embedding_cuda_forward_reduce_scatter(embeddings) (CUDA)");
-  m.def("forward_allgather", &sparse_embedding_cuda_forward_all_gather,
-        "sparse_embedding_cuda_forward_all_gather(embeddings) (CUDA)");
+  //m.def("forward_reducescatter", &sparse_embedding_cuda_forward_reduce_scatter,
+        //"sparse_embedding_cuda_forward_reduce_scatter(embeddings) (CUDA)");
+  //m.def("forward_allgather", &sparse_embedding_cuda_forward_all_gather,
+        //"sparse_embedding_cuda_forward_all_gather(embeddings) (CUDA)");
 }

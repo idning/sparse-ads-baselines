@@ -12,10 +12,3 @@ setup(name='table_batched_embeddings',
       ],
       cmdclass={'build_ext': BuildExtension})
 
-
-from torch.utils.cpp_extension import load
-module = load(
-    name='table_batched_embeddings',
-    sources=['table_batched_embeddings.cpp', 'table_batched_embeddings_cuda.cu'],
-    extra_cflags=['-O2'],
-    verbose=True)
