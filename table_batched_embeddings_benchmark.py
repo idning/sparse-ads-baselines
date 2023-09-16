@@ -9,6 +9,14 @@ import sys
 import torch
 import table_batched_embeddings_ops
 
+from torch.utils.cpp_extension import load
+table_batched_embeddings = load(
+    name='table_batched_embeddings',
+    extra_include_paths=['/private/home/tulloch/src/'],
+    sources=['table_batched_embeddings.cpp', 'table_batched_embeddings_cuda.cu'],
+    extra_cflags=['-O2'],
+    verbose=True)
+
 
 def div_round_up(a, b):
     return int((a + b - 1) // b) * b

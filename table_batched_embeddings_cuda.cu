@@ -1,6 +1,7 @@
 #include <ATen/ATen.h>
 #include <ATen/AccumulateType.h>
-#include <ATen/CUDAGenerator.h>
+//#include <ATen/CUDAGenerator.h>
+#include <ATen/cuda/CUDAGeneratorImpl.h>
 #include <ATen/core/TensorAccessor.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <c10/cuda/CUDAGuard.h>
@@ -15,6 +16,10 @@
 using namespace at;
 
 #define DEVICE_INLINE __device__ inline __attribute__((always_inline))
+
+#ifndef __HALF2_TO_UI
+#define __HALF2_TO_UI(var) *(reinterpret_cast<unsigned int *>(&(var)))
+#endif
 
 namespace {
 
@@ -764,7 +769,10 @@ c10::optional<Tensor> batched_embedding_backward_adagrad_approx_cuda(
         } else {
           std::pair<uint64_t, uint64_t> rng_engine_inputs;
           {
-            auto gen = at::cuda::detail::getDefaultCUDAGenerator();
+              at::CUDAGeneratorImpl* gen = at::get_generator_or_default<at::CUDAGeneratorImpl>(
+            c10::nullopt, at::cuda::detail::getDefaultCUDAGenerator());
+
+            //auto gen = at::cuda::detail::getDefaultCUDAGenerator();
             std::lock_guard<std::mutex> lock(gen->mutex_);
             rng_engine_inputs = gen->philox_engine_inputs(
                 L_max * ((D + kWarpSize - 1) / kWarpSize));
@@ -861,23 +869,23 @@ int64_t computeStorageSize(IntArrayRef sizes, IntArrayRef strides) {
   return size;
 }
 
-Tensor new_managed_tensor(Tensor self, std::vector<std::int64_t> sizes) {
-  auto strides = defaultStrides(sizes);
-  auto storage = Storage(self.dtype(), computeStorageSize(sizes, strides),
-                         &g_managed_allocator,
-                         /*resizable=*/false);
-  auto tensor = at::empty({0}, self.options()).set_(storage, 0, sizes, strides);
-  return tensor;
-}
+//Tensor new_managed_tensor(Tensor self, std::vector<std::int64_t> sizes) {
+  //auto strides = defaultStrides(sizes);
+  //auto storage = Storage(self.dtype(), computeStorageSize(sizes, strides),
+                         //&g_managed_allocator,
+                         //[>resizable=<]false);
+  //auto tensor = at::empty({0}, self.options()).set_(storage, 0, sizes, strides);
+  //return tensor;
+//}
 
-Tensor new_host_mapped_tensor(Tensor self, std::vector<std::int64_t> sizes) {
-  auto strides = defaultStrides(sizes);
-  auto storage = Storage(self.dtype(), computeStorageSize(sizes, strides),
-                         &g_host_mapped_allocator,
-                         /*resizable=*/false);
-  auto tensor = at::empty({0}, self.options()).set_(storage, 0, sizes, strides);
-  return tensor;
-}
+//Tensor new_host_mapped_tensor(Tensor self, std::vector<std::int64_t> sizes) {
+  //auto strides = defaultStrides(sizes);
+  //auto storage = Storage(self.dtype(), computeStorageSize(sizes, strides),
+                         //&g_host_mapped_allocator,
+                         //[>resizable=<]false);
+  //auto tensor = at::empty({0}, self.options()).set_(storage, 0, sizes, strides);
+  //return tensor;
+//}
 
 template <typename scalar_t, bool shared_indices, typename F>
 __global__ void batched_embedding_forward_kernel_mixed_D_1(
@@ -1134,7 +1142,9 @@ c10::optional<Tensor> batched_embedding_backward_adagrad_approx_mixed_D_cuda(
         } else {
           std::pair<uint64_t, uint64_t> rng_engine_inputs;
           {
-            auto gen = at::cuda::detail::getDefaultCUDAGenerator();
+              at::CUDAGeneratorImpl* gen = at::get_generator_or_default<at::CUDAGeneratorImpl>(
+            c10::nullopt, at::cuda::detail::getDefaultCUDAGenerator());
+            //auto gen = at::cuda::detail::getDefaultCUDAGenerator();
             std::lock_guard<std::mutex> lock(gen->mutex_);
             rng_engine_inputs = gen->philox_engine_inputs(
                 L_max * ((total_D + kWarpSize - 1) / kWarpSize));
@@ -1447,7 +1457,9 @@ c10::optional<Tensor> batched_embedding_backward_adagrad_exact_mixed_D_cuda(
         } else {
           std::pair<uint64_t, uint64_t> rng_engine_inputs;
           {
-            auto gen = at::cuda::detail::getDefaultCUDAGenerator();
+              at::CUDAGeneratorImpl* gen = at::get_generator_or_default<at::CUDAGeneratorImpl>(
+            c10::nullopt, at::cuda::detail::getDefaultCUDAGenerator());
+            //auto gen = at::cuda::detail::getDefaultCUDAGenerator();
             std::lock_guard<std::mutex> lock(gen->mutex_);
             rng_engine_inputs = gen->philox_engine_inputs(
                 ((total_D + kWarpSize - 1) / kWarpSize));
@@ -1684,7 +1696,9 @@ c10::optional<Tensor> batched_embedding_backward_adagrad_exact_cuda(
         } else {
           std::pair<uint64_t, uint64_t> rng_engine_inputs;
           {
-            auto gen = at::cuda::detail::getDefaultCUDAGenerator();
+              at::CUDAGeneratorImpl* gen = at::get_generator_or_default<at::CUDAGeneratorImpl>(
+            c10::nullopt, at::cuda::detail::getDefaultCUDAGenerator());
+            //auto gen = at::cuda::detail::getDefaultCUDAGenerator();
             std::lock_guard<std::mutex> lock(gen->mutex_);
             rng_engine_inputs =
                 gen->philox_engine_inputs(((D + kWarpSize - 1) / kWarpSize));

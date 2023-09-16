@@ -26,8 +26,8 @@ c10::optional<Tensor> batched_embedding_backward_adagrad_exact_cuda(
     Tensor optimizer_state, float learning_rate, float eps,
     bool stochastic_rounding, int64_t BT_block_size);
 
-Tensor new_managed_tensor(Tensor self, std::vector<std::int64_t> sizes);
-Tensor new_host_mapped_tensor(Tensor self, std::vector<std::int64_t> sizes);
+//Tensor new_managed_tensor(Tensor self, std::vector<std::int64_t> sizes);
+//Tensor new_host_mapped_tensor(Tensor self, std::vector<std::int64_t> sizes);
 
 Tensor batched_embedding_forward_mixed_D_cuda(
     Tensor weights, Tensor table_offsets, Tensor dim_offsets, int64_t total_D,
@@ -65,6 +65,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 
     m.def("forward_mixed_D", &batched_embedding_forward_mixed_D_cuda);
     m.def("construct_offsets", &construct_offsets);
-    m.def("new_managed_tensor", &new_managed_tensor);
-    m.def("new_host_mapped_tensor", &new_host_mapped_tensor);
+    //m.def("new_managed_tensor", &new_managed_tensor);
+    //m.def("new_host_mapped_tensor", &new_host_mapped_tensor);
 }
